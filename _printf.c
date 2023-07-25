@@ -1,66 +1,120 @@
-#include "main.h"
+#include <stdio.h>
+#include <stdarg.h>
 
-void print_buffer(char buffer[], int *buff_ind);
+#define BUFF_SIZE 1024
 
-/**
- * _printf - Printf function
- * @format: printf format.
- * Return: The Printed chars.
- */
-int _printf(const char *format, ...)
-{
-	int i, printed = 0, printed_chars = 0;
-	int flags, width, precision, size, buff_ind = 0;
-	va_list list;
-	char buffer[BUFF_SIZE];
-
-	if (format == NULL)
-		return (-1);
-
-	va_start(list, format);
-
-	for (i = 0; format && format[i] != '\0'; i++)
-	{
-		if (format[i] != '%')
-		{
-			buffer[buff_ind++] = format[i];
-			if (buff_ind == BUFF_SIZE)
-				print_buffer(buffer, &buff_ind);
-			/* write (1, &format[i], 1);*/
-			printed_chars++;
-		}
-		else
-		{
-			print_buffer(buffer, &buff_ind);
-			flags = get_flags(format, &i);
-			width = get_width(format, &i, list);
-			precision = get_precision(format, &i, list);
-			size = get_size(format, &i);
-			++i;
-			printed = handle_print(format, &i, list, buffer,
-				flags, width, precision, size);
-			if (printed == -1)
-				return (-1);
-			printed_chars += printed;
-		}
-	}
-
-	print_buffer(buffer, &buff_ind);
-
-	va_end(list);
-
-	return (printed_chars);
+void print_buffer(char buffer[], int *buff_ind) {
+  if (*buff_ind > 0) {
+    write(1, &buffer[0], *buff_ind);
+    *buff_ind = 0;
+  }
 }
 
-/**
-* print_buffer - Prints the buffer's contents if present
-* @buffer:The Chars  Array 
-* @buff_ind: Index where to  next char,it also   represents the length.
- */
-void print_buffer(char buffer[], int *buff_ind)
-{
-	if (*buff_ind > 0)
-		write(1, &buffer[0], *buff_ind);
+int get_flags(const char *format, int *i) {
+  int flags = 0;
+  while (format[*i] == ' ') {
+    *i++;
+  }
+  if (format[*i] == '-') {
+    flags |= FLAG_LEFT_JUSTIFY;
+    *i++;
+  } else if (format[*i] == '+') {
+    flags |= FLAG_SIGN;
+    *i++;
+  } else if (format[*i] == '#') {
+    flags |= FLAG_ALTERNATE;
+    *i++;
+  }
+  return flags;
+}
 
-	*buff_ind = 0;
+int get_width(const char *format, int *i, va_list list) {
+  int width = 0;
+  while (format[*i] >= '0' && format[*i] <= '9') {
+    width = width * 10 + (format[*i] - '0');
+    *i++;
+  }
+  if (format[*i] == '*') {
+    width = va_arg(list, int);
+    *i++;
+  }
+  return width;
+}
+
+int get_precision(const char *format, int *i, va_list list) {
+  int precision = -1;
+  if (format[*i] == '.') {
+    *i++;
+    if (format[*i] == '*') {
+      precision = va_arg(list, int);
+      *i++;
+    } else {
+      while (format[*i] >= '0' && format[*i] <= '9') {
+        precision = precision * 10 + (format[*i] - '0');
+        *i++;
+      }
+    }
+  }
+  return precision;
+}
+
+int get_size(const char *format, int *i) {
+  int size = 0;
+  if (format[*i] == 'h') {
+    size |= SIZE_H;
+    *i++;
+  } else if (format[*i] == 'l') {
+    size |= SIZE_L;
+    *i++;
+  }
+  return size;
+}
+
+int handle_print(const char *format, int *i, va_list list, char buffer[],
+                 int flags, int width, int precision, int size) {
+  int printed = 0;
+  switch (format[*i]) {
+    case 'c': {
+      char ch = va_arg(list, int);
+      buffer[printed++] = ch;
+      break;
+    }
+    case 's': {
+      char *str = va_arg(list, char *);
+      int len = strlen(str);
+      if (precision >= 0 && len > precision) {
+        len = precision;
+      }
+      for (int j = 0; j < len; j++) {
+        buffer[printed++] = str[j];
+      }
+      break;
+    }
+    case 'd': {
+      int val = va_arg(list, int);
+      if (flags & FLAG_LEFT_JUSTIFY) {
+        while (printed < width) {
+          buffer[printed++] = ' ';
+        }
+      }
+      if (flags & FLAG_SIGN) {
+        if (val < 0) {
+          buffer[printed++] = '-';
+          val = -val;
+        }
+      }
+      if (size & SIZE_H) {
+        val = (short)val;
+      } else if (size & SIZE_L) {
+        val = (long)val;
+      }
+      len = snprintf(buffer + printed, BUFF_SIZE - printed, "%d", val);
+      printed += len;
+      break;
+    }
+    default: {
+      return -1;
+    }
+  }
+  return printed;
 }
