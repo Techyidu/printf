@@ -1,269 +1,185 @@
 #include "main.h"
-
-
-/*PRINT POINTER **/
 /**
  * print_pointer - Prints the value of a pointer variable
- * @types: List a of arguments
+ * @types: List of arguments
  * @buffer: Buffer array to handle print
- * @flags:  Calculates active flags
+ * @flags: Calculates active flags
  * @width: get width
  * @precision: Precision specification
  * @size: Size specifier
  * Return: Number of chars printed.
  */
+
 int print_pointer(va_list types, char buffer[],
-int printing_flags, int width, int precision, int size)
+		int flags, int width, int precision, int size)
 {
-char padding_character;
-int index = BUFF_SIZE - 2, length = 2; /* length=2, for '0x' */
-unsigned long num_addrs;
-char map_to[] = "0123456789abcdef";
-void *addrs = va_arg(types, void *);
+	char extra_c = 0, padd = ' ';
+	int ind = BUFF_SIZE - 2, length = 2, padd_start = 1;
+	unsigned long num_addrs;
+	char map_to[] = "0123456789abcdef";
+	void *addrs = va_arg(types, void *);
 
+	UNUSED(width);
+	UNUSED(size);
 
-/* Unused parameter */
-UNUSED(size);
+	if (addrs == NULL)
+		return (write(1, "(nil)", 5));
 
+	buffer[BUFF_SIZE - 1] = '\0';
+	UNUSED(precision);
 
-/* Check if the pointer is null */
-if (addrs == NULL) {
-return write(1, "(nil)", 5);
+	num_addrs = (unsigned long)addrs;
+
+	while (num_addrs > 0)
+	{
+		buffer[ind--] = map_to[num_addrs % 16];
+		num_addrs /= 16;
+		length++;
+	}
+
+	if ((flags & F_ZERO) && !(flags & F_MINUS))
+		padd = '0';
+	if (flags & F_PLUS)
+		extra_c = '+', length++;
+	else if (flags & F_SPACE)
+		extra_c = ' ', length++;
+
+	ind++;
+
+	return (write_pointer(buffer, ind, length,
+				width, flags, padd, extra_c, padd_start));
 }
 
-
-/* Initialize the buffer with a null terminator */
-buffer[BUFF_SIZE - 1] = '\0';
-
-
-/* Convert the pointer to a hexadecimal number */
-num_addrs = (unsigned long)addrs;
-
-
-while (num_addrs > 0) {
-buffer[index--] = map_to[num_addrs % 16];
-num_addrs /= 16;
-length++;
-}
-
-
-/* Determine the padding character */
-padding_character = (printing_flags & F_ZERO) && !(printing_flags &
-F_MINUS) ? '0' : ' ';
-
-
-/* Write the pointer to the buffer */
-index++;
-return write_pointer(buffer, index, length,
-width, printing_flags, padding_character, 0, 1);
-}
-
-
-/*For Print non-printable */
 /**
  * print_non_printable - Prints ascii codes in hexa of non printable chars
- * @types: Lista of arguments
+ * @types: List of arguments
  * @buffer: Buffer array to handle print
- * @flags:  Calculates active flags
+ * @flags: Calculates active flags
  * @width: get width
  * @precision: Precision specification
  * @size: Size specifier
  * Return: Number of chars printed
  */
 int print_non_printable(va_list types, char buffer[],
-int printing_flags, int width, int precision, int size)
+		int flags, int width, int precision, int size)
 {
-int i = 0, offset = 0;
-char *str = va_arg(types, char *);
+	int p = 0, offset = 0;
+	char *str = va_arg(types, char *);
 
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
 
-/* Unused parameters */
-UNUSED(printing_flags);
-UNUSED(width);
-UNUSED(precision);
-UNUSED(size);
+	if (str == NULL)
+		return (write(1, "(null)", 6));
 
+	while (str[p] != '\0')
+	{
+		if (is_printable(str[p]))
+			buffer[p + offset] = str[p];
+		else
+			offset += append_hexa_code(str[p], buffer, p + offset);
 
-/* Check if the string is null */
-if (str == NULL) {
-return write(1, "(null)", 6);
+		p++;
+	}
+
+	buffer[p + offset] = '\0';
+
+	return (write(1, buffer, p + offset));
 }
 
-
-/* Print the non-printable characters in hexadecimal */
-while (str[i] != '\0') {
-if (is_printable(str[i])) {
-buffer[i + offset] = str[i];
-} else {
-offset += append_hexa_code(str[i], buffer, i + offset);
-}
-
-
-i++;
-}
-
-
-/* Write the buffer to the standard output */
-buffer[i + offset] = '\0';
-return write(1, buffer, i + offset);
-}
-
-
-/*Print The Reverse*/
 /**
  * print_reverse - Prints reverse string.
  * @types: Lista of arguments
  * @buffer: Buffer array to handle print
- * @flags:  Calculates active flags
+ * @flags: Calculates active flags
  * @width: get width
  * @precision: Precision specification
  * @size: Size specifier
  * Return: Numbers of chars printed
  */
 
-
 int print_reverse(va_list types, char buffer[],
-int printing_flags, int width, int precision, int size)
+		int flags, int width, int precision, int size)
 {
-char *str;
-int i, count = 0;
+	char *str;
+	int p, count = 0;
 
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(size);
 
-/* Unused parameters */
-UNUSED(buffer);
-UNUSED(printing_flags);
-UNUSED(width);
-UNUSED(size);
+	str = va_arg(types, char *);
 
+	if (str == NULL)
+	{
+		UNUSED(precision);
 
+		str = ")Null(";
+	}
+	for (p = 0; str[p]; p++)
+		;
 
+	for (p = p - 1; p >= 0; p--)
+	{
+		char z = str[p];
 
-int print_reverse(va_list types, char buffer[],
-int printing_flags, int width, int precision, int size)
-{
-char *str;
-int i, count = 0;
-
-
-/* Unused parameters */
-UNUSED(buffer);
-UNUSED(printing_flags);
-UNUSED(width);
-UNUSED(size);
-
-
-/* Check if the string is null */
-if (str == NULL) {
-return write(1, "(null)", 6);
+		write(1, &z, 1);
+		count++;
+	}
+	return (count);
 }
-
-
-/* Print the string in reverse order */
-for (i = strlen(str) - 1; i >= 0; i--) {
-count += write(1, &str[i], 1);
-}
-
-
-return count;
-}
-
-
-/****************** UTILITY FUNCTIONS *************************/
-/**
- * _putchar - writes a character to stdout
- * @c: The character to write
- *
- * Return: On success 1.
- * On error, -1 is returned and errno is set appropriately.
- */
-int _putchar(char c)
-{
-return write(1, &c, 1);
-}
-
 
 /**
- * is_printable - checks if a character is printable
- * @c: The character to check
- *
- * Return: 1 if the character is printable, 0 otherwise.
+ * print_rot13string - Print a string in rot13.
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags: Calculates active flags
+ * @width: get width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Numbers of chars printed
  */
-int is_printable(char c)
+int print_rot13string(va_list types, char buffer[],
+		int flags, int width, int precision, int size)
 {
-return (c >= 32 && c <= 126);
-}
+	char x;
+	char *str;
+	unsigned int p, q;
+	int count = 0;
+	char in[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	char out[] = "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm";
 
+	str = va_arg(types, char *);
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
 
-/**
- * append_hexa_code - appends the hexadecimal code of a character to a buffer
- * @c: The character to get the hexadecimal code of
- * @buffer: The buffer to append the code to
- * @index: The index in the buffer to append the code to
- *
- * Return: The number of characters appended to the buffer.
- */
-int append_hexa_code(char c, char buffer[], int index)
-{
-char hex_byte1, hex_byte2;
+	if (str == NULL)
+		str = "(AHYY)";
 
-
-hex_byte1 = c >> 4;
-hex_byte2 = c % 16;
-
-
-buffer[index] = "0123456789abcdef"[hex_byte1];
-buffer[index - 1] = "0123456789abcdef"[hex_byte2];
-
-
-return 2;
-}
-
-
-/**
- * write_pointer - writes a pointer in hexadecimal format to a buffer
- * @buffer: The buffer to write the pointer to
- * @index: The index in the buffer to start writing the pointer
- * @length: The length of the pointer in hexadecimal
- * @width: The width of the pointer
- * @flags: The flags for the pointer
- * @padding_character: The padding character
- * @pad_start: Whether to pad the start of the pointer
- *
- * Return: The number of characters written to the buffer.
- */
-int write_pointer(char buffer[], int index, int length, int width, int flags,
-char padding_character, int pad_start, int zero_padding)
-{
-int count = 0;
-
-
-/* Check if we need to pad the start */
-if (pad_start) {
-while (width > length) {
-buffer[index++] = padding_character;
-width--;
-count++;
-}
-}
-
-
-/* Write the pointer in hexadecimal format */
-while (length > 0) {
-buffer[index++] = buffer[index - length];
-length--;
-count++;
-}
-
-
-/* Check if we need to pad the end */
-if (zero_padding && width > count) {
-while (width > count) {
-buffer[index++] = '0';
-width--;
-count++;
-}
-}
-
-
-return count;
+	for (p = 0; str[p]; p++)
+	{
+		for (q = 0; in[q]; q++)
+		{
+			if (in[q] == str[p])
+			{
+				x = out[q];
+				write(1, &x, 1);
+				count++;
+				break;
+			}
+		}
+		if (!in[q])
+		{
+			x = str[p];
+			write(1, &x, 1);
+			count++;
+		}
+	}
+	return (count);
 }
