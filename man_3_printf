@@ -1,6 +1,6 @@
 /**
  * Auth: Ruxxo and Sandra
- * File: man_3_printf
+ * File: man_3_print.c file
  */
 
 .TH man 3 "10 july 2022" "0.1" "_printf man page"
